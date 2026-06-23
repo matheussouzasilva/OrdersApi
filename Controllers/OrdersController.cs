@@ -70,23 +70,29 @@ public IActionResult Teste()
     #endregion
 
     #region 🔍 Endpoint: Buscar por ID (GET)
-[HttpGet("{id:guid}")]
+    /*
+     Antes desta fase: verificávamos "if (order == null) return NotFound()"
+     Agora: o serviço lança NotFoundException se o pedido não existir,
+     e o middleware converte para 404 automaticamente.
+
+     O controller não precisa mais saber o que significa "não encontrado".
+     Ele apenas chama o serviço e confia que exceções serão tratadas.
+     Isso é Separation of Concerns funcionando em todas as camadas.
+    */
+    [HttpGet("{id:guid}")]
     public IActionResult GetById(Guid id)
     {
+        #region 🧠 Chamada ao serviço (lança NotFoundException se não existir)
         var order = _service.GetById(id);
-
-        #region ❌ Caso não encontrado
-        if (order == null)
-            return NotFound();
         #endregion
 
-        #region 🔄 Mapeamento para resposta
+        #region 🔄 Mapeamento para DTO de resposta
         var response = new OrderResponseDto
         {
-            Id = order.Id,
+            Id           = order.Id,
             CustomerName = order.CustomerName,
-            TotalAmount = order.TotalAmount,
-            Status = order.Status
+            TotalAmount  = order.TotalAmount,
+            Status       = order.Status
         };
         #endregion
 
@@ -136,22 +142,20 @@ public IActionResult Teste()
     public IActionResult Delete(Guid id)
     {
         #region 🧠 Chamada da camada de serviço
-        // Delegamos a lógica de remoção ao serviço
-        // O controller NÃO executa regras de negócio diretamente
-        // Isso é o princípio de Single Responsibility (SRP) do SOLID
-        var deleted = _service.Delete(id);
-        #endregion
+        /*
+         Delete agora é void: não retorna bool.
+         Se o pedido não existir, o serviço lança NotFoundException.
+         O middleware captura e retorna 404 automaticamente.
 
-        #region ❌ Pedido não encontrado → 404
-        // O serviço retornou false: pedido não existe
-        // Retornamos 404 com uma mensagem explicativa
-        if (!deleted)
-            return NotFound(new { error = "Order not found" });
+         O controller não precisa mais de if/else para tratar "não encontrado".
+         Isso é Separation of Concerns: cada camada tem uma responsabilidade clara.
+        */
+        _service.Delete(id);
         #endregion
 
         #region ✅ Pedido deletado com sucesso → 204
-        // NoContent() = HTTP 204 No Content
-        // Indica sucesso sem corpo de resposta
+        // Se chegou aqui, nenhuma exceção foi lançada → deleção bem-sucedida
+        // NoContent() = HTTP 204 No Content: sucesso sem corpo de resposta
         return NoContent();
         #endregion
     }
