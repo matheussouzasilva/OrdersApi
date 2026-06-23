@@ -1,3 +1,4 @@
+using OrdersApi.Middlewares;
 using OrdersApi.Services;
 
 #region 🏗️ Criação do builder da aplicação
@@ -38,6 +39,25 @@ var app = builder.Build();
 
 #region 🔁 Configuração do pipeline HTTP
 // O pipeline define como cada requisição HTTP será processada
+
+#region 🛡️ Middleware global de tratamento de exceções
+/*
+ IMPORTANTE: deve ser o PRIMEIRO middleware registrado.
+
+ Por quê?
+ → Os middlewares executam na ordem em que são registrados.
+ → Se uma exceção ocorrer em qualquer middleware posterior
+   (Authorization, Controllers...), ela precisa ser capturada
+   por alguém que já esteja "acima" na cadeia.
+ → Colocando ErrorHandlingMiddleware primeiro, garantimos que
+   ele envolve toda a requisição com um try/catch global.
+
+ Ordem de execução:
+   Request → [ErrorHandling ✅] → [Authorization] → Controller
+   Response ←        ←                  ←               ←
+*/
+app.UseMiddleware<ErrorHandlingMiddleware>();
+#endregion
 
 #region 🔐 Middleware de autorização
 // Controla acesso a endpoints protegidos

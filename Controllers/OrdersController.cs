@@ -28,35 +28,44 @@ public IActionResult Teste()
 }
 
     #region ➕ Endpoint: Criar pedido (POST)
+    /*
+     Por que não tem mais try/catch aqui?
+     ──────────────────────────────────────
+     O ErrorHandlingMiddleware (Middlewares/ErrorHandlingMiddleware.cs)
+     agora intercepta qualquer exceção lançada em qualquer camada.
+
+     Benefícios:
+     → Controller mais limpo e focado em sua responsabilidade:
+       receber a requisição, chamar o serviço e retornar a resposta.
+     → Tratamento de erros centralizado em um único lugar.
+     → Não precisamos repetir try/catch em cada endpoint.
+
+     Isso é o princípio DRY (Don't Repeat Yourself) em ação.
+    */
     [HttpPost]
     public IActionResult Create(CreateOrderDto dto)
     {
-        try
-        {
-            #region 🧠 Chamada da regra de negócio
-            var order = _service.Create(dto.CustomerName, dto.TotalAmount);
-            #endregion
+        #region 🧠 Chamada da regra de negócio
+        // Se TotalAmount <= 0, o serviço lança ArgumentException
+        // O middleware captura e retorna 400 automaticamente
+        var order = _service.Create(dto.CustomerName, dto.TotalAmount);
+        #endregion
 
-            #region 🔄 Mapeamento para DTO de resposta
-            var response = new OrderResponseDto
-            {
-                Id = order.Id,
-                CustomerName = order.CustomerName,
-                TotalAmount = order.TotalAmount,
-                Status = order.Status
-            };
-            #endregion
-
-            #region 📤 Retorno HTTP 201 Created
-            return CreatedAtAction(nameof(GetById), new { id = order.Id }, response);
-            #endregion
-        }
-        catch (ArgumentException ex)
+        #region 🔄 Mapeamento para DTO de resposta
+        var response = new OrderResponseDto
         {
-            #region ❌ Tratamento de erro de regra de negócio
-            return BadRequest(new { message = ex.Message });
-            #endregion
-        }
+            Id = order.Id,
+            CustomerName = order.CustomerName,
+            TotalAmount = order.TotalAmount,
+            Status = order.Status
+        };
+        #endregion
+
+        #region 📤 Retorno HTTP 201 Created
+        // 201 Created: recurso criado com sucesso
+        // CreatedAtAction gera o header Location apontando para GET /api/orders/{id}
+        return CreatedAtAction(nameof(GetById), new { id = order.Id }, response);
+        #endregion
     }
     #endregion
 
