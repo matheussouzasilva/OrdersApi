@@ -1,0 +1,175 @@
+### =====================================================
+### OrdersApi — Arquivo de testes HTTP
+### Extensão recomendada: REST Client (Huachao Mao)
+###
+### Como usar:
+###   1. Execute a API: dotnet run
+###   2. Clique em "Send Request" acima de cada bloco
+###   3. Para testes que dependem de um ID real:
+###      → Execute o POST primeiro
+###      → Copie o "id" da resposta
+###      → Cole na variável @orderId abaixo
+### =====================================================
+
+@baseUrl = http://localhost:5069
+
+# Substitua pelo ID retornado após criar um pedido (POST)
+@orderId = 00000000-0000-0000-0000-000000000000
+
+
+# =======================================================
+# HEALTH CHECK
+# =======================================================
+
+### ✅ Verificar se a API está no ar
+# Esperado: 200 OK — { "message": "API online" }
+GET {{baseUrl}}/api/orders/teste
+
+
+# =======================================================
+# CRIAR PEDIDO — POST /api/orders
+# =======================================================
+
+### ✅ Criar pedido válido
+# Esperado: 201 Created
+# Header Location aponta para GET /api/orders/{id}
+# Copie o "id" da resposta e cole na variável @orderId acima
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "customerName": "Ana Silva",
+  "totalAmount": 250.00
+}
+
+###
+
+### ✅ Criar segundo pedido (para ter mais dados na listagem)
+# Esperado: 201 Created
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "customerName": "Carlos Souza",
+  "totalAmount": 89.90
+}
+
+###
+
+### ✅ Criar pedido com valor exatamente no limite mínimo (0.01)
+# Esperado: 201 Created
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "customerName": "Limite Mínimo",
+  "totalAmount": 0.01
+}
+
+###
+
+### ❌ Criar pedido com valor negativo
+# Esperado: 400 Bad Request
+# { "error": "TotalAmount must be greater than zero", "type": "ValidationException" }
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "customerName": "Erro Valor",
+  "totalAmount": -50.00
+}
+
+###
+
+### ❌ Criar pedido com valor zero
+# Esperado: 400 Bad Request
+# { "error": "TotalAmount must be greater than zero", "type": "ValidationException" }
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "customerName": "Erro Zero",
+  "totalAmount": 0
+}
+
+###
+
+### ❌ Criar pedido com nome do cliente vazio
+# Esperado: 400 Bad Request
+# { "error": "CustomerName is required", "type": "ValidationException" }
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "customerName": "",
+  "totalAmount": 100.00
+}
+
+###
+
+### ❌ Criar pedido sem o campo customerName (campo ausente)
+# Esperado: 400 Bad Request
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "totalAmount": 100.00
+}
+
+
+# =======================================================
+# LISTAR PEDIDOS — GET /api/orders
+# =======================================================
+
+### ✅ Listar todos os pedidos
+# Esperado: 200 OK — array JSON com todos os pedidos
+# Array vazio [] se nenhum pedido foi criado ainda
+GET {{baseUrl}}/api/orders
+
+
+# =======================================================
+# BUSCAR PEDIDO POR ID — GET /api/orders/{id}
+# =======================================================
+
+### ✅ Buscar pedido pelo ID
+# Esperado: 200 OK — objeto com dados do pedido
+# ATENÇÃO: substitua @orderId acima com um ID real antes de executar
+GET {{baseUrl}}/api/orders/{{orderId}}
+
+###
+
+### ❌ Buscar pedido com ID inexistente
+# Esperado: 404 Not Found
+# { "error": "Order <id> not found", "type": "NotFoundException" }
+GET {{baseUrl}}/api/orders/00000000-0000-0000-0000-000000000099
+
+###
+
+### ❌ Buscar pedido com ID em formato inválido (não é um GUID)
+# Esperado: 400 Bad Request (rejeitado pelo ASP.NET antes de chegar no controller)
+GET {{baseUrl}}/api/orders/id-invalido-nao-e-guid
+
+
+# =======================================================
+# DELETAR PEDIDO — DELETE /api/orders/{id}
+# =======================================================
+
+### ✅ Deletar pedido pelo ID
+# Esperado: 204 No Content (sem corpo na resposta)
+# ATENÇÃO: substitua @orderId acima com um ID real antes de executar
+DELETE {{baseUrl}}/api/orders/{{orderId}}
+
+###
+
+### ❌ Deletar pedido já removido (mesmo ID, segunda vez)
+# Esperado: 404 Not Found
+# { "error": "Order <id> not found", "type": "NotFoundException" }
+# Execute logo após o DELETE acima para simular double-delete
+DELETE {{baseUrl}}/api/orders/{{orderId}}
+
+###
+
+### ❌ Deletar pedido com ID inexistente
+# Esperado: 404 Not Found
+# { "error": "Order <id> not found", "type": "NotFoundException" }
+DELETE {{baseUrl}}/api/orders/00000000-0000-0000-0000-000000000099
